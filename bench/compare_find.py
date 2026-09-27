@@ -12,7 +12,7 @@ JEGREP = sys.argv[3] if len(sys.argv) > 3 else "jegrep"
 qs = json.load(open(qfile))
 
 def jevfind(q):
-    out = subprocess.run(["jev", "find", q, root], capture_output=True, text=True).stdout
+    out = subprocess.run([os.environ.get("JEVGREP", "jevgrep"), q, root], capture_output=True, text=True).stdout
     return [(m.group(1), [(int(m.group(2)), int(m.group(3)))]) for m in
             re.finditer(r"^\s+(?:[\d.]+|grep)\s+(\S+?):(\d+)-(\d+)", out, re.M)]
 
