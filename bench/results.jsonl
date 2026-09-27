@@ -1,0 +1,12 @@
+{"task":"T1 wikipedia","mode":"before","seconds":22.3,"claude_turns":3,"screenshots":2,"ok":true,"note":"actions batched per turn, favourable to Claude"}
+{"task":"T2 google flights","mode":"before","seconds":48.3,"claude_turns":6,"screenshots":5,"ok":true,"note":"second attempt; Claude already knew the layout; a calendar click hung so date was typed"}
+{"task":"T2 google flights","mode":"after","seconds":9.1,"claude_turns":1,"screenshots":0,"ok":true,"note":"8 jev actions, 0 asks"}
+{"task":"T1 wikipedia","mode":"after","seconds":3.7,"claude_turns":1,"screenshots":0,"ok":true,"note":"2 jev actions"}
+{"task":"T3 form fill","mode":"after","seconds":9.3,"claude_turns":3,"screenshots":0,"ok":false,"note":"9 of 10 fields; time input invisible to jev snapshot; jev looped 3x then asked; Claude said skip; Submit refused by guard"}
+{"task":"T3 form fill","mode":"before","seconds":24.9,"claude_turns":3,"screenshots":2,"ok":false,"note":"9 of 10 fields; time input rejected typed text too; all 12 actions batched into one turn, favourable to Claude"}
+{"task":"E swarm 3 lookups","mode":"before","seconds":12.2,"note":"3 jev runs one after another"}
+{"task":"E swarm 3 lookups","mode":"after","seconds":3.6,"note":"3 jev runs in parallel, one daemon"}
+{"task":"D simulator step","mode":"after","seconds":[1.77,2.36,2.51],"correct":"2/3","note":"AXe describe-ui (0.55s warm, 4.4s cold) + jev pick + AXe tap; miss = off-screen Wallpaper row, picked Home Screen at 0.81"}
+{"task":"D screen read","mode":"compare","screenshot_tokens":1500,"axe_compact_tokens":252,"axe_raw_bytes":302671}
+{"task":"C checker 8 cases","mode":"compare","jev_correct":6,"jev_false_pass":1,"jev_avg_s":0.42,"keyword_correct":8,"keyword_s":0}
+{"task":"B focus 2 questions","mode":"compare","jev_correct":"2/2","jev_s":[0.55,0.45],"grep_ms":[12,10],"file_lines":1471,"chunks":44}

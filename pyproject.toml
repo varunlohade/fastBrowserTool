@@ -1,0 +1,12 @@
+[project]
+name = "jevduo"
+version = "0.1.0"
+description = "Claude plans, jev clicks: a fast two-way loop between Claude Code and the jev choice model."
+requires-python = ">=3.12"
+dependencies = [
+  "jev-ultrafast @ git+https://github.com/browser-use/jev-ultrafast.git",
+  "websocket-client>=1.9.2",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Baseline driver wrapper: Claude alone, screenshot -> click x,y.
+D=$(cd "$(dirname "$0")/.." && pwd)
+exec "$D/.venv/bin/python" "$D/bench/claude_drive.py" "$@"

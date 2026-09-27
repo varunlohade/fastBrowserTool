@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""jev — Claude's fast hands. Thin stdlib client for the jevduo daemon.
+
+  jev web <url> "<goal>" [--min-conf 0.5] [--max-steps 25]
+  jev say <id> "<hint>"        jev click <id> <idx> [--stop]
+  jev type <id> <idx> "<text>" jev look <id> [--all]      jev close <id>
+  jev pick "<question>" opt1 opt2 ...   (or options one per line on stdin)
+  jev close all                         jev stop   (stop the daemon)
+"""
+import json, os, subprocess, sys, time, urllib.request
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+PORT = int(os.environ.get("JEVDUO_PORT", "8791"))
+BASE = f"http://127.0.0.1:{PORT}"
+
+def up():
+    try:
+        return urllib.request.urlopen(BASE + "/health", timeout=1).status == 200
+    except Exception:
+        return False
+
+def ensure():
+    if up():
+        return
+    os.makedirs(os.path.join(ROOT, "runs"), exist_ok=True)
+    log = open(os.path.join(ROOT, "runs", "daemon.log"), "a")
+    subprocess.Popen([os.path.join(ROOT, ".venv", "bin", "python"), os.path.join(ROOT, "server.py")],
+                     stdout=log, stderr=log, start_new_session=True)
+    for _ in range(100):
+        if up():
+            return
+        time.sleep(0.1)
+    sys.exit("jev: daemon did not start; see runs/daemon.log")
+
+def call(cmd):
+    ensure()
+    req = urllib.request.Request(BASE + "/cmd", data=json.dumps(cmd).encode(), method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=600) as r:
+            print(r.read().decode())
+    except urllib.error.HTTPError as e:
+        print(e.read().decode()); sys.exit(1)
+
+def flag(args, name, default=None, cast=str):
+    if name in args:
+        i = args.index(name); v = args[i + 1]; del args[i:i + 2]; return cast(v)
+    return default
+
+def main():
+    a = sys.argv[1:]
+    if not a or a[0] in {"-h", "--help"}:
+        print(__doc__); return
+    op, a = a[0], a[1:]
+    if op == "web":
+        mc, ms = flag(a, "--min-conf", 0.0, float), flag(a, "--max-steps", 25, int)
+        call({"op": "web", "url": a[0], "goal": a[1], "min_conf": mc, "max_steps": ms})
+    elif op in {"say"}:
+        call({"op": "say", "id": a[0], "text": a[1]})
+    elif op in {"click", "select"}:
+        stop = "--stop" in a; a = [x for x in a if x != "--stop"]
+        call({"op": op, "id": a[0], "index": a[1], "stop": stop})
+    elif op == "type":
+        stop = "--stop" in a; a = [x for x in a if x != "--stop"]
+        call({"op": "type", "id": a[0], "index": a[1], "text": a[2], "stop": stop})
+    elif op in {"look", "close", "go"}:
+        call({"op": op, "id": a[0], "all": "--all" in a})
+    elif op == "pick":
+        opts = a[1:] or [l.strip() for l in sys.stdin if l.strip()]
+        call({"op": "pick", "question": a[0], "options": opts})
+    elif op == "stop":
+        subprocess.run(["pkill", "-f", os.path.join(ROOT, "server.py")])
+    else:
+        print(__doc__); sys.exit(2)
+
+if __name__ == "__main__":
+    main()
