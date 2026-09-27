@@ -480,6 +480,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             cmd = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            if cmd.get("op") not in ("close", "stop") and not os.environ.get("TYPESAFE_API_KEY"):
+                return self._send(400, "[ERROR] jev needs a TypeSafe API key. Add TYPESAFE_API_KEY to .env.")
             self._send(200, handle(cmd))
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()

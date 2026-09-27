@@ -24,6 +24,8 @@ The full numbers, the failures and the method are in **[RESULTS.md](RESULTS.md)*
 
 ## Install
 
+You need a **TypeSafe API key**. jev is TypeSafe's model, and it does not work without one.
+
 ```sh
 git clone https://github.com/varunlohade/fastBrowserTool && cd fastBrowserTool
 uv sync
