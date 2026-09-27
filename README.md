@@ -25,7 +25,7 @@ The full numbers, the failures and the method are in **[RESULTS.md](RESULTS.md)*
 ## Install
 
 ```sh
-git clone https://github.com/varunlohade/jevduo && cd jevduo
+git clone https://github.com/varunlohade/fastBrowserTool && cd fastBrowserTool
 uv sync
 cp .env.example .env        # add your TypeSafe key and an OpenAI-compatible text-model key
 ln -s "$PWD/bin/jev" ~/.local/bin/jev
