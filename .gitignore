@@ -9,3 +9,5 @@ bench/.baseline_tab
 .DS_Store
 bench/find_questions.json
 bench/find_questions_heldout.json
+bench/find_questions_big.json
+tools/

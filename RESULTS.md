@@ -62,6 +62,28 @@ Tuning set (10): v1 got 6/10 top-1 and 9/10 found. v2 got 10/10 top-1.
 
 Raw scores: [`bench/find_before_heldout.json`](bench/find_before_heldout.json), [`bench/find_questions_heldout_compare.json`](bench/find_questions_heldout_compare.json). Harness: [`bench/compare_find.py`](bench/compare_find.py) `<repo> <questions.json> [jegrep]`.
 
+### Big repo: a private 1,967-file, 362k-line Flutter app (20 held-out questions)
+
+Same method: an answer key written by one agent, a fresh grep agent that never saw the key, and no tuning on these questions. For this repo `jev find` gained a folder stage (jev's hard limit is about 250 options per question), a cache, and a filter for generated files.
+
+| | Claude + grep | `jev find` v3 | jegrep 0.1.3 |
+|---|---|---|---|
+| Found at all | **20/20** | 16/20 | 12/20 |
+| Right on the first pick | **20/20** | 10/20 | 12/20 |
+| In the top 3 | – | 15/20 | 12/20 |
+| Keyword questions, found | 8/8 | 8/8 | 8/8 (all first pick) |
+| Behaviour questions, found | **12/12** | 8/12 | 4/12 |
+| Lines to read to reach the hit (median) | – | 118 | 112 |
+| Time per question | 9.7 s (2.5 tool calls, max 16 s) | 2.15 s + one read | 1.54 s + one read |
+
+**Verdict: do not replace grep with a jev search.**
+- **Grep did not get lost, even in a big repo:** it was right on all 20, with no answer taking more than 16 s.
+- **Both jev tools miss 20–40 % at scale.** Almost all the misses are behaviour-phrased questions, which is exactly where a meaning-based search should shine.
+- **Jev's confidence does not flag its misses,** so every miss costs a jev call + a wasted read + the grep hunt anyway. At a 20 % miss rate that roughly cancels the speed gain.
+- **jegrep is the better keyword finder** (8/8 first pick). `jev find` is the better behaviour finder (8/12 against 4/12). Neither one is reliable enough to trust over grep.
+
+**Caveat.** The 62 h of long hunts in our history did not show up in either test. An agent that knew the code wrote the questions, and even the behaviour questions keep strong words from the code. Real hunts start vaguer. That case is still untested.
+
 ## What went wrong, so you don't repeat it
 
 - **Time inputs are invisible to jev.** jev-ultrafast's page snapshot skips `<input type=time>`. jev looped 3 times on the next field, its loop guard fired, and it asked Claude. Claude by screenshot also failed that field: typed text doesn't land in a time input.

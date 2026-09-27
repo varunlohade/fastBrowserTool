@@ -1,0 +1,286 @@
+{
+ "jev find": [
+  {
+   "id": 201,
+   "kind": "keyword",
+   "rank": 2,
+   "read_lines": 196,
+   "s": 3.52
+  },
+  {
+   "id": 202,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 120,
+   "s": 1.99
+  },
+  {
+   "id": 203,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 38,
+   "s": 2.01
+  },
+  {
+   "id": 204,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 16,
+   "s": 2.02
+  },
+  {
+   "id": 205,
+   "kind": "keyword",
+   "rank": 3,
+   "read_lines": 362,
+   "s": 2.08
+  },
+  {
+   "id": 206,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 83,
+   "s": 1.86
+  },
+  {
+   "id": 207,
+   "kind": "keyword",
+   "rank": 5,
+   "read_lines": 358,
+   "s": 2.09
+  },
+  {
+   "id": 208,
+   "kind": "keyword",
+   "rank": 2,
+   "read_lines": 300,
+   "s": 1.91
+  },
+  {
+   "id": 209,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 2.04
+  },
+  {
+   "id": 210,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 2.24
+  },
+  {
+   "id": 211,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 31,
+   "s": 2.05
+  },
+  {
+   "id": 212,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 36,
+   "s": 2.0
+  },
+  {
+   "id": 213,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 21,
+   "s": 2.21
+  },
+  {
+   "id": 214,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 118,
+   "s": 2.21
+  },
+  {
+   "id": 215,
+   "kind": "behaviour",
+   "rank": 2,
+   "read_lines": 213,
+   "s": 2.02
+  },
+  {
+   "id": 216,
+   "kind": "behaviour",
+   "rank": 2,
+   "read_lines": 213,
+   "s": 2.07
+  },
+  {
+   "id": 217,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 2.24
+  },
+  {
+   "id": 218,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 83,
+   "s": 2.16
+  },
+  {
+   "id": 219,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 2.18
+  },
+  {
+   "id": 220,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 117,
+   "s": 2.15
+  }
+ ],
+ "jegrep": [
+  {
+   "id": 201,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 112,
+   "s": 2.09
+  },
+  {
+   "id": 202,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 120,
+   "s": 1.52
+  },
+  {
+   "id": 203,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 105,
+   "s": 1.57
+  },
+  {
+   "id": 204,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 16,
+   "s": 1.76
+  },
+  {
+   "id": 205,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 223,
+   "s": 1.46
+  },
+  {
+   "id": 206,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 91,
+   "s": 1.36
+  },
+  {
+   "id": 207,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 102,
+   "s": 1.51
+  },
+  {
+   "id": 208,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 623,
+   "s": 1.45
+  },
+  {
+   "id": 209,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 85,
+   "s": 1.39
+  },
+  {
+   "id": 210,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.33
+  },
+  {
+   "id": 211,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 31,
+   "s": 1.49
+  },
+  {
+   "id": 212,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.53
+  },
+  {
+   "id": 213,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 171,
+   "s": 1.73
+  },
+  {
+   "id": 214,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.51
+  },
+  {
+   "id": 215,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.57
+  },
+  {
+   "id": 216,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.52
+  },
+  {
+   "id": 217,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.58
+  },
+  {
+   "id": 218,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.18
+  },
+  {
+   "id": 219,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.51
+  },
+  {
+   "id": 220,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 126,
+   "s": 1.72
+  }
+ ]
+}

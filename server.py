@@ -254,7 +254,9 @@ def code_files(root):
         for d, dirs, names in os.walk(root):
             dirs[:] = [x for x in dirs if x not in SKIP_DIRS and not x.startswith(".")]
             files += [os.path.relpath(os.path.join(d, n), root) for n in names]
-    return [f for f in files if os.path.splitext(f)[1] in CODE_EXT and not any(p in SKIP_DIRS for p in f.split("/"))]
+    generated = re.compile(r"\.(g|freezed|gr|mocks|pb|pbenum|pbjson|pbserver)\.dart$|\.min\.js$|\.d\.ts$")
+    return [f for f in files if os.path.splitext(f)[1] in CODE_EXT and not generated.search(f)
+            and not any(p in SKIP_DIRS for p in f.split("/"))]
 
 STOP = set("where what which when does do is are the a an of to in on for and or how app code that this it its from with by be as at user users when into get gets".split())
 
@@ -308,48 +310,114 @@ def ask(question, criteria, state=None):
             "questions": {"q": {"type": "choice", "criteria": criteria, "instructions": {"question": question}}}}
     return post_json("https://api.typesafe.ai/v1/systemone", os.environ["TYPESAFE_API_KEY"], body)["answers"]["q"]
 
-def find(root, question, k=5, max_files=6, max_chunks=160):
-    """Search code by meaning. Recall first: jev's file picks + grep's keyword hits both feed the final jev pick."""
+INDEX = {}  # path -> (mtime, lines, chunks); the daemon keeps it warm between searches
+
+def indexed(root, files):
+    out = {}
+    for f in files:
+        full = os.path.join(root, f)
+        try:
+            m = os.path.getmtime(full)
+        except OSError:
+            continue
+        hit = INDEX.get(full)
+        if not hit or hit[0] != m:
+            lines = open(full, errors="replace").read().splitlines()
+            hit = (m, lines, [(a, s, b, *summary(f, lines, a, s, b)) for a, s, b in chunks_of(lines)])
+            INDEX[full] = hit
+        out[f] = hit
+    return out
+
+def fit(criteria, limit=80_000):
+    """Keep a jev request under its size limit by trimming each option evenly."""
+    size = sum(len(v) for v in criteria.values())
+    if size <= limit:
+        return criteria
+    cap = max(60, int(limit / max(len(criteria), 1)))
+    return {k: v[:cap] for k, v in criteria.items()}
+
+def top_keys(answer, n, cum_stop=0.97):
+    ranked = sorted(answer["probabilities"].items(), key=lambda kv: -kv[1])
+    out, cum = [], 0.0
+    for key, p in ranked[:n]:
+        out.append(key); cum += p
+        if cum >= cum_stop:
+            break
+    return out
+
+MAX_OPTIONS = 200  # jev rejects questions with more than ~250 options
+
+def pick_folders(question, folders, n=6):
+    """Pick likely folders. Too many? Group them by path prefix, pick groups first, then folders inside."""
+    names = sorted(folders)
+    if len(names) > MAX_OPTIONS:
+        depth = max(len(d.split("/")) for d in names)
+        while depth > 1 and len({"/".join(d.split("/")[:depth]) for d in names}) > MAX_OPTIONS:
+            depth -= 1
+        groups = {}
+        for d in names:
+            groups.setdefault("/".join(d.split("/")[:depth]), []).append(d)
+        gnames = sorted(groups)[:MAX_OPTIONS]
+        crit = {str(i + 1): f"{g}/: " + ", ".join(sorted({d[len(g):].strip("/").split("/")[0] or "." for d in groups[g]}))[:300]
+                for i, g in enumerate(gnames)}
+        a = ask(f"Which folder most likely contains the code that answers: {question}", fit(crit, 70_000))
+        names = [d for key in top_keys(a, n, 0.95) for d in groups[gnames[int(key) - 1]]][:MAX_OPTIONS]
+    crit = {str(i + 1): f"{d}: " + ", ".join(os.path.splitext(os.path.basename(x))[0] for x in folders[d])
+            for i, d in enumerate(names)}
+    a = ask(f"Which folder most likely contains the code that answers: {question}", fit(crit, 70_000))
+    return [names[int(key) - 1] for key in top_keys(a, n, 0.95)]
+
+def find(root, question, k=5, max_files=6, max_chunks=MAX_OPTIONS):
+    """Search code by meaning. Recall first: grep and jev both nominate; jev makes the final pick.
+    Big repos: grep + a folder pick shortlist files, jev picks files, then jev picks chunks."""
     t0 = time.perf_counter()
     files = code_files(root)
     if not files:
         return f"no code files under {root}"
-    texts = {f: open(os.path.join(root, f), errors="replace").read().splitlines() for f in files}
-    chunks = {f: [(a, s, b, *summary(f, texts[f], a, s, b)) for a, s, b in chunks_of(texts[f])] for f in files}
-    # Grep lane (free): score every chunk by how many question words its identifiers/strings contain.
+    idx = indexed(root, files)
+    files = [f for f in files if f in idx]
+    t_index = time.perf_counter()
     qwords = {stem(w) for w in re.findall(r"[a-z]{3,}", question.lower()) if w not in STOP}
     def gscore(tokens):
         return sum(any(t.startswith(q) or q.startswith(t) and len(t) >= 4 for t in tokens) for q in qwords)
-    graded = sorted(((gscore(c[4]), f, c) for f in files for c in chunks[f]), key=lambda x: -x[0])
+    graded = sorted(((gscore(c[4]), f, c) for f in files for c in idx[f][2]), key=lambda x: -x[0])
     grep_hits = [(f, c) for sc, f, c in graded[:8] if sc > 0]
-    # Jev lane, stage 1: pick files from path + declared names.
-    if len(files) <= max_files:
-        top_files = list(files)
+    decls = {f: "; ".join(re.sub(r"\s+", " ", l.strip())[:60] for l in idx[f][1] if DECL.match(l)) for f in files}
+    # Shortlist files. Small repos: all of them. Big repos: grep's best files + jev's folder pick.
+    if len(files) <= 120:
+        shortlist = list(files)
     else:
-        crit = {str(i + 1): f"{f}: " + "; ".join(re.sub(r"\s+", " ", l.strip())[:60] for l in texts[f] if DECL.match(l))[:600]
-                for i, f in enumerate(files)}
-        a = ask(f"Which source file most likely contains the code that answers: {question}", crit)
-        ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])
-        top_files, cum = [], 0.0
-        for key, p in ranked[:max_files]:
-            top_files.append(files[int(key) - 1]); cum += p
-            if cum >= 0.97:
-                break
+        by_file = {}
+        for sc, f, c in graded:
+            if sc > 0 and len(by_file) < 40:
+                by_file.setdefault(f, sc)
+        folders = {}
+        for f in files:
+            folders.setdefault(os.path.dirname(f) or ".", []).append(f)
+        picked = [f for d in pick_folders(question, folders) for f in folders[d]]
+        shortlist = list(dict.fromkeys(list(by_file) + picked))[:MAX_OPTIONS]
+    t_short = time.perf_counter()
+    if len(shortlist) <= max_files:
+        top_files = shortlist
+    else:
+        crit = {str(i + 1): f"{f}: {decls[f]}" for i, f in enumerate(shortlist)}
+        a = ask(f"Which source file most likely contains the code that answers: {question}", fit(crit))
+        top_files = [shortlist[int(key) - 1] for key in top_keys(a, max_files)]
     t1 = time.perf_counter()
-    # Stage 2: one jev pick over the union of both lanes.
     cands, seen = [], set()
-    for f, c in grep_hits + [(f, c) for f in top_files for c in chunks[f]]:
+    for f, c in grep_hits + [(f, c) for f in top_files for c in idx[f][2]]:
         if (f, c[1]) not in seen:
             seen.add((f, c[1])); cands.append((f, c))
-    cands = cands[:max_chunks]
-    a = ask(f"Which code chunk answers: {question}", {str(i + 1): c[3] for i, (f, c) in enumerate(cands)})
+    cands = cands[:max_chunks]  # never above jev's option limit
+    a = ask(f"Which code chunk answers: {question}", fit({str(i + 1): c[3] for i, (f, c) in enumerate(cands)}))
     ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])[:k]
     t2 = time.perf_counter()
     picks = [cands[int(key) - 1] + (p,) for key, p in ranked]
     top = {(f, c[1]) for f, c, _ in picks}
-    extra = [(f, c) for f, c in grep_hits[:2] if (f, c[1]) not in top]   # grep's best stay visible
-    lines = [f"{question}  ({len(files)} files → {len(top_files)} + grep → {len(cands)} chunks; "
-             f"{round((t2 - t0) * 1000)}ms)"]
+    extra = [(f, c) for f, c in grep_hits[:2] if (f, c[1]) not in top]
+    ms = lambda a_, b_: round((b_ - a_) * 1000)
+    lines = [f"{question}  ({len(files)} files → {len(shortlist)} → {len(top_files)} + grep → {len(cands)} chunks; "
+             f"{ms(t0, t2)}ms = index {ms(t0, t_index)} + shortlist {ms(t_index, t_short)} + files {ms(t_short, t1)} + chunks {ms(t1, t2)})"]
     for f, c, p in picks:
         lines.append(f"  {p:.2f}  {f}:{c[1] + 1}-{c[2]}  {c[3].split(' | ')[0].split(' ', 1)[-1][:80]}")
     for f, c in extra:

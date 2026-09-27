@@ -4,6 +4,10 @@ Also reports how many lines Claude must read to reach the first hit (read cost).
 usage: compare_find.py <repo> <questions.json> [path/to/jegrep]"""
 import json, os, re, subprocess, sys, time
 root, qfile = os.path.abspath(sys.argv[1]), sys.argv[2]
+ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+for l in open(ENV) if os.path.exists(ENV) else []:  # jegrep reads the key from the environment
+    if "=" in l and not l.startswith("#"):
+        k, v = l.strip().split("=", 1); os.environ.setdefault(k, v)
 JEGREP = sys.argv[3] if len(sys.argv) > 3 else "jegrep"
 qs = json.load(open(qfile))
 
