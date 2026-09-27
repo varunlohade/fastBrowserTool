@@ -19,7 +19,7 @@ Claude answers in one line, and jev carries on.
 | 3 lookups at once (swarm) | 12.2 s | **3.6 s** | **3.4×** |
 
 Two ideas were tested and **killed**: jev as a pass/fail checker (it gave one false PASS; a keyword check got 8/8) and jev as a file-chunk finder (`grep` is 50× faster).
-A follow-up `jev find` (search code by meaning) scored 9/10 in the top 3 at 0.85 s, but grep scored 10/10 at 8.9 s on the same questions: no real win on a small repo.
+`jev find` (search code by meaning) found **20/20** held-out answers in 0.86 s, with ranges about 5× tighter than [jegrep](https://github.com/can1357/jegrep) (16/20). Against Claude + grep (20/20, 7.9 s) it is about 1.6× faster on a small repo.
 The full numbers, the failures and the method are in **[RESULTS.md](RESULTS.md)**.
 
 ## Install
@@ -43,7 +43,7 @@ jev type <id> <idx> "<text>"      # give jev a field value it could not work out
 jev look <id> [--all]             # see the page as jev sees it
 jev close <id|all>                # close sessions
 jev pick "<question>" opt1 opt2   # one fast multiple-choice call (~0.4 s)
-jev find "<question>" [dir]       # experimental: search code by meaning (sends code chunks to TypeSafe)
+jev find "<question>" [dir]       # search code by meaning; top 5 + grep hits (sends code summaries to TypeSafe)
 jev stop                          # stop the daemon
 ```
 

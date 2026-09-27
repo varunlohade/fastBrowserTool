@@ -256,68 +256,111 @@ def code_files(root):
             files += [os.path.relpath(os.path.join(d, n), root) for n in names]
     return [f for f in files if os.path.splitext(f)[1] in CODE_EXT and not any(p in SKIP_DIRS for p in f.split("/"))]
 
-def chunks_of(lines, cap=60):
-    starts = [0] + [i for i, l in enumerate(lines) if DECL.match(l)]
-    starts = sorted(set(starts))
+STOP = set("where what which when does do is are the a an of to in on for and or how app code that this it its from with by be as at user users when into get gets".split())
+
+def split_ident(word):
+    return [w.lower() for w in re.findall(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+", word)]
+
+def stem(w):
+    for suf in ("ing", "ed", "es", "s"):
+        if w.endswith(suf) and len(w) - len(suf) >= 4:
+            return w[: -len(suf)]
+    return w
+
+def chunks_of(lines, cap=150):
+    """Whole declarations: doc comments stay with their function, tiny headers merge forward."""
+    starts = sorted({0, *[i for i, l in enumerate(lines) if DECL.match(l)]})
+    fixed = []
+    for s in starts:  # pull leading comments / attributes into the chunk
+        while s > 0 and re.match(r"\s*(//|@|#|/\*|\*)", lines[s - 1]):
+            s -= 1
+        fixed.append(s)
+    starts = sorted(set(fixed))
+    spans = list(zip(starts, starts[1:] + [len(lines)]))
+    merged = []
+    for a, b in spans:
+        if merged and merged[-1][1] - merged[-1][0] < 8:   # header too small to stand alone
+            merged[-1] = (merged[-1][0], b)
+        else:
+            merged.append((a, b))
     out = []
-    for a, b in zip(starts, starts[1:] + [len(lines)]):
+    for a, b in merged:
         for s in range(a, b, cap):
-            out.append((s, min(b, s + cap)))
+            out.append((a, s, min(b, s + cap)))  # (decl start, piece start, piece end)
     return out
+
+def summary(f, lines, a, s, b):
+    """What jev sees per chunk: signature + every identifier and string used inside."""
+    sig = next((l.strip() for l in lines[a:b] if DECL.match(l)), lines[a].strip())[:120]
+    body = "\n".join(lines[s:b])
+    idents, seen = [], set()
+    for w in re.findall(r"[A-Za-z_][A-Za-z0-9_]{3,}", body):
+        if w not in seen and w.lower() not in STOP:
+            seen.add(w); idents.append(w)
+    strings = re.findall(r'"([^"\n]{4,40})"', body)[:6]
+    text = f"{f}:{s + 1}-{b} {sig} | uses: {' '.join(idents[:45])}"
+    if strings:
+        text += " | text: " + " / ".join(strings)
+    return text[:420], {t for w in seen for t in split_ident(w)} | {w.lower() for w in re.findall(r"[a-z]{4,}", " ".join(strings).lower())}
 
 def ask(question, criteria, state=None):
     body = {"model": os.environ.get("TYPESAFE_MODEL", "jev-latest"), "state": state or {},
             "questions": {"q": {"type": "choice", "criteria": criteria, "instructions": {"question": question}}}}
     return post_json("https://api.typesafe.ai/v1/systemone", os.environ["TYPESAFE_API_KEY"], body)["answers"]["q"]
 
-def find(root, question, k=3, max_files=4):
-    """Search code by meaning: jev picks likely files, then likely chunks. Returns file:line ranges."""
+def find(root, question, k=5, max_files=6, max_chunks=160):
+    """Search code by meaning. Recall first: jev's file picks + grep's keyword hits both feed the final jev pick."""
     t0 = time.perf_counter()
     files = code_files(root)
     if not files:
         return f"no code files under {root}"
     texts = {f: open(os.path.join(root, f), errors="replace").read().splitlines() for f in files}
-    # Stage 1: pick files from path + declared names.
-    crit = {}
-    for i, f in enumerate(files):
-        names = [re.sub(r"\s+", " ", l.strip())[:60] for l in texts[f] if DECL.match(l)][:25]
-        crit[str(i + 1)] = f"{f}: " + "; ".join(names)
+    chunks = {f: [(a, s, b, *summary(f, texts[f], a, s, b)) for a, s, b in chunks_of(texts[f])] for f in files}
+    # Grep lane (free): score every chunk by how many question words its identifiers/strings contain.
+    qwords = {stem(w) for w in re.findall(r"[a-z]{3,}", question.lower()) if w not in STOP}
+    def gscore(tokens):
+        return sum(any(t.startswith(q) or q.startswith(t) and len(t) >= 4 for t in tokens) for q in qwords)
+    graded = sorted(((gscore(c[4]), f, c) for f in files for c in chunks[f]), key=lambda x: -x[0])
+    grep_hits = [(f, c) for sc, f, c in graded[:8] if sc > 0]
+    # Jev lane, stage 1: pick files from path + declared names.
     if len(files) <= max_files:
-        top_files = files
+        top_files = list(files)
     else:
+        crit = {str(i + 1): f"{f}: " + "; ".join(re.sub(r"\s+", " ", l.strip())[:60] for l in texts[f] if DECL.match(l))[:600]
+                for i, f in enumerate(files)}
         a = ask(f"Which source file most likely contains the code that answers: {question}", crit)
         ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])
         top_files, cum = [], 0.0
         for key, p in ranked[:max_files]:
             top_files.append(files[int(key) - 1]); cum += p
-            if cum >= 0.95:
+            if cum >= 0.97:
                 break
     t1 = time.perf_counter()
-    # Stage 2: pick chunks inside those files from a short preview of each.
-    spans, crit = [], {}
-    for f in top_files:
-        for a_, b_ in chunks_of(texts[f]):
-            preview = "\n".join(texts[f][a_:a_ + 12])
-            if not preview.strip():
-                continue
-            spans.append((f, a_, b_))
-            crit[str(len(spans))] = f"{f} lines {a_ + 1}-{b_}:\n{preview}"[:900]
-    a = ask(f"Which code chunk answers: {question}", crit)
+    # Stage 2: one jev pick over the union of both lanes.
+    cands, seen = [], set()
+    for f, c in grep_hits + [(f, c) for f in top_files for c in chunks[f]]:
+        if (f, c[1]) not in seen:
+            seen.add((f, c[1])); cands.append((f, c))
+    cands = cands[:max_chunks]
+    a = ask(f"Which code chunk answers: {question}", {str(i + 1): c[3] for i, (f, c) in enumerate(cands)})
     ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])[:k]
     t2 = time.perf_counter()
-    lines = [f"{question}  ({len(files)} files → {len(top_files)} → {len(spans)} chunks; "
-             f"files {round((t1 - t0) * 1000)}ms, chunks {round((t2 - t1) * 1000)}ms)"]
-    for key, p in ranked:
-        f, a_, b_ = spans[int(key) - 1]
-        first = next((l.strip() for l in texts[f][a_:b_] if l.strip()), "")[:80]
-        lines.append(f"  {p:.2f}  {f}:{a_ + 1}-{b_}  {first}")
+    picks = [cands[int(key) - 1] + (p,) for key, p in ranked]
+    top = {(f, c[1]) for f, c, _ in picks}
+    extra = [(f, c) for f, c in grep_hits[:2] if (f, c[1]) not in top]   # grep's best stay visible
+    lines = [f"{question}  ({len(files)} files → {len(top_files)} + grep → {len(cands)} chunks; "
+             f"{round((t2 - t0) * 1000)}ms)"]
+    for f, c, p in picks:
+        lines.append(f"  {p:.2f}  {f}:{c[1] + 1}-{c[2]}  {c[3].split(' | ')[0].split(' ', 1)[-1][:80]}")
+    for f, c in extra:
+        lines.append(f"  grep  {f}:{c[1] + 1}-{c[2]}  {c[3].split(' | ')[0].split(' ', 1)[-1][:80]}")
     return "\n".join(lines)
 
 
 def handle(cmd):
     op = cmd.get("op")
     if op == "find":
-        return find(cmd["root"], cmd["question"], int(cmd.get("k", 3)))
+        return find(cmd["root"], cmd["question"], int(cmd.get("k", 5)))
     if op == "pick":
         return pick(cmd["question"], cmd["options"], cmd.get("context", ""))
     if op == "web":

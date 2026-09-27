@@ -1,0 +1,286 @@
+{
+ "jev find": [
+  {
+   "id": 101,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 32,
+   "s": 0.85
+  },
+  {
+   "id": 102,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 15,
+   "s": 0.9
+  },
+  {
+   "id": 103,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 42,
+   "s": 0.83
+  },
+  {
+   "id": 104,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 42,
+   "s": 0.93
+  },
+  {
+   "id": 105,
+   "kind": "keyword",
+   "rank": 2,
+   "read_lines": 44,
+   "s": 0.82
+  },
+  {
+   "id": 106,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 29,
+   "s": 0.76
+  },
+  {
+   "id": 107,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 22,
+   "s": 0.82
+  },
+  {
+   "id": 108,
+   "kind": "keyword",
+   "rank": 4,
+   "read_lines": 71,
+   "s": 0.77
+  },
+  {
+   "id": 109,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 37,
+   "s": 0.83
+  },
+  {
+   "id": 110,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 40,
+   "s": 0.92
+  },
+  {
+   "id": 111,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 31,
+   "s": 0.85
+  },
+  {
+   "id": 112,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 71,
+   "s": 0.94
+  },
+  {
+   "id": 113,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 76,
+   "s": 0.87
+  },
+  {
+   "id": 114,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 47,
+   "s": 0.89
+  },
+  {
+   "id": 115,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 27,
+   "s": 0.9
+  },
+  {
+   "id": 116,
+   "kind": "behaviour",
+   "rank": 2,
+   "read_lines": 28,
+   "s": 0.86
+  },
+  {
+   "id": 117,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 35,
+   "s": 0.84
+  },
+  {
+   "id": 118,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 24,
+   "s": 0.89
+  },
+  {
+   "id": 119,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 35,
+   "s": 0.92
+  },
+  {
+   "id": 120,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 25,
+   "s": 0.84
+  }
+ ],
+ "jegrep": [
+  {
+   "id": 101,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 108,
+   "s": 1.29
+  },
+  {
+   "id": 102,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 89,
+   "s": 1.16
+  },
+  {
+   "id": 103,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 317,
+   "s": 1.25
+  },
+  {
+   "id": 104,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 147,
+   "s": 1.19
+  },
+  {
+   "id": 105,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 169,
+   "s": 1.19
+  },
+  {
+   "id": 106,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 133,
+   "s": 1.14
+  },
+  {
+   "id": 107,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 170,
+   "s": 1.23
+  },
+  {
+   "id": 108,
+   "kind": "keyword",
+   "rank": 1,
+   "read_lines": 204,
+   "s": 1.28
+  },
+  {
+   "id": 109,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 162,
+   "s": 1.21
+  },
+  {
+   "id": 110,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.19
+  },
+  {
+   "id": 111,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 654,
+   "s": 1.15
+  },
+  {
+   "id": 112,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 89,
+   "s": 1.2
+  },
+  {
+   "id": 113,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 0.87
+  },
+  {
+   "id": 114,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 108,
+   "s": 1.1
+  },
+  {
+   "id": 115,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 308,
+   "s": 1.25
+  },
+  {
+   "id": 116,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 492,
+   "s": 1.21
+  },
+  {
+   "id": 117,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 0.89
+  },
+  {
+   "id": 118,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 150,
+   "s": 1.15
+  },
+  {
+   "id": 119,
+   "kind": "behaviour",
+   "rank": null,
+   "read_lines": null,
+   "s": 1.09
+  },
+  {
+   "id": 120,
+   "kind": "behaviour",
+   "rank": 1,
+   "read_lines": 78,
+   "s": 1.14
+  }
+ ]
+}
