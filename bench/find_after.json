@@ -1,0 +1,62 @@
+[
+ {
+  "id": 1,
+  "kind": "keyword",
+  "rank": 1,
+  "seconds": 0.94
+ },
+ {
+  "id": 2,
+  "kind": "keyword",
+  "rank": 2,
+  "seconds": 0.89
+ },
+ {
+  "id": 3,
+  "kind": "keyword",
+  "rank": 2,
+  "seconds": 0.78
+ },
+ {
+  "id": 4,
+  "kind": "keyword",
+  "rank": 1,
+  "seconds": 0.78
+ },
+ {
+  "id": 5,
+  "kind": "keyword",
+  "rank": null,
+  "seconds": 0.79
+ },
+ {
+  "id": 6,
+  "kind": "behaviour",
+  "rank": 2,
+  "seconds": 0.85
+ },
+ {
+  "id": 7,
+  "kind": "behaviour",
+  "rank": 1,
+  "seconds": 0.88
+ },
+ {
+  "id": 8,
+  "kind": "behaviour",
+  "rank": 1,
+  "seconds": 0.85
+ },
+ {
+  "id": 9,
+  "kind": "behaviour",
+  "rank": 1,
+  "seconds": 0.8
+ },
+ {
+  "id": 10,
+  "kind": "behaviour",
+  "rank": 1,
+  "seconds": 0.97
+ }
+]

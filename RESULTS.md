@@ -26,6 +26,24 @@ Five ideas went to five skeptical reviewer agents first. Then each idea got a re
 | **C. Checker** | jev judges pass/fail from page text | 6/8 right, **1 false PASS** (the date picker was still open), 0.42 s | **Killed.** A keyword check got 8/8 in 0 ms. |
 | **B. Focus** | jev picks the right chunk of a big file | 2/2 right, 0.45–0.55 s (the reviewer saw 2.5–21 s with bigger prompts) | **Killed.** `grep` takes 10 ms when you know a keyword. |
 
+## Follow-up: `jev find` (search code by meaning)
+
+Our history showed 424 "keyword hunts" (3+ searches in a row) across 704 Claude Code sessions: median 41 s, about 62 h in total. So we built `jev find "<question>" [dir]`. Jev picks the likely files from their paths and declared names, then picks the likely chunks from 12-line previews, and prints the top 3 `file:line` ranges.
+
+Test: 10 questions about a private 27-file, 10k-line Swift app, written by one agent with an answer key. Five had an obvious keyword. Five were phrased by behaviour, with words that do not appear in the code. A fresh agent answered them with grep and never saw the key. `jev find` answered the same 10.
+
+| | Claude + grep | `jev find` |
+|---|---|---|
+| Correct | **10/10** | 6/10 top-1 · 9/10 top-3 |
+| Time per question | 8.9 s (2.7 tool calls) | **0.85 s**, + one read to verify |
+| Keyword questions | 5/5 · 8.8 s | 2/5 top-1 · 4/5 top-3 · 0.84 s |
+| Behaviour questions | 5/5 · 8.9 s | 4/5 top-1 · 5/5 top-3 · 0.87 s |
+
+**Verdict: no real win on a small repo.** Grep never went into a long hunt here (worst case 12.5 s, 5 calls). After the read that verifies jev's pick, the saving is about 2–4 s per question, and the answers are less accurate. The one miss pointed at the 5 lines just above the right function, which is a chunking flaw.
+`jev find` stays in as **experimental**. The open question is big repos, where the long hunts happen. Also note that it sends code chunks to TypeSafe.
+
+Raw data: [`bench/find_before.json`](bench/find_before.json), [`bench/find_after.json`](bench/find_after.json). The question file stays private because it quotes that app's code. To rerun on your own repo, write `bench/find_questions.json` (fields: id, kind, question, file, start, end, needle) and run `bench/find_bench.py <repo>`.
+
 ## What went wrong, so you don't repeat it
 
 - **Time inputs are invisible to jev.** jev-ultrafast's page snapshot skips `<input type=time>`. jev looped 3 times on the next field, its loop guard fired, and it asked Claude. Claude by screenshot also failed that field: typed text doesn't land in a time input.

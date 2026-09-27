@@ -236,8 +236,88 @@ def pick(question, options, context=""):
     return "\n".join(lines)
 
 
+CODE_EXT = {".swift", ".py", ".js", ".ts", ".tsx", ".jsx", ".dart", ".go", ".kt", ".java", ".rb", ".rs",
+            ".c", ".cc", ".cpp", ".h", ".m", ".mm", ".cs", ".php", ".scala", ".sh"}
+SKIP_DIRS = {".git", "node_modules", "build", "dist", ".venv", "venv", "Pods", ".dart_tool", "DerivedData", "__pycache__"}
+DECL = re.compile(r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|fileprivate|internal|open|static|final|override|"
+                  r"async|export|default|mutating|abstract|pub)\s+)*(?:func|fn|def|function|class|struct|enum|extension|"
+                  r"protocol|interface|impl|trait)\b")
+
+def code_files(root):
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", root, "ls-files"], capture_output=True, text=True, timeout=10).stdout.split("\n")
+        files = [f for f in out if f]
+    except Exception:
+        files = []
+    if not files:
+        for d, dirs, names in os.walk(root):
+            dirs[:] = [x for x in dirs if x not in SKIP_DIRS and not x.startswith(".")]
+            files += [os.path.relpath(os.path.join(d, n), root) for n in names]
+    return [f for f in files if os.path.splitext(f)[1] in CODE_EXT and not any(p in SKIP_DIRS for p in f.split("/"))]
+
+def chunks_of(lines, cap=60):
+    starts = [0] + [i for i, l in enumerate(lines) if DECL.match(l)]
+    starts = sorted(set(starts))
+    out = []
+    for a, b in zip(starts, starts[1:] + [len(lines)]):
+        for s in range(a, b, cap):
+            out.append((s, min(b, s + cap)))
+    return out
+
+def ask(question, criteria, state=None):
+    body = {"model": os.environ.get("TYPESAFE_MODEL", "jev-latest"), "state": state or {},
+            "questions": {"q": {"type": "choice", "criteria": criteria, "instructions": {"question": question}}}}
+    return post_json("https://api.typesafe.ai/v1/systemone", os.environ["TYPESAFE_API_KEY"], body)["answers"]["q"]
+
+def find(root, question, k=3, max_files=4):
+    """Search code by meaning: jev picks likely files, then likely chunks. Returns file:line ranges."""
+    t0 = time.perf_counter()
+    files = code_files(root)
+    if not files:
+        return f"no code files under {root}"
+    texts = {f: open(os.path.join(root, f), errors="replace").read().splitlines() for f in files}
+    # Stage 1: pick files from path + declared names.
+    crit = {}
+    for i, f in enumerate(files):
+        names = [re.sub(r"\s+", " ", l.strip())[:60] for l in texts[f] if DECL.match(l)][:25]
+        crit[str(i + 1)] = f"{f}: " + "; ".join(names)
+    if len(files) <= max_files:
+        top_files = files
+    else:
+        a = ask(f"Which source file most likely contains the code that answers: {question}", crit)
+        ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])
+        top_files, cum = [], 0.0
+        for key, p in ranked[:max_files]:
+            top_files.append(files[int(key) - 1]); cum += p
+            if cum >= 0.95:
+                break
+    t1 = time.perf_counter()
+    # Stage 2: pick chunks inside those files from a short preview of each.
+    spans, crit = [], {}
+    for f in top_files:
+        for a_, b_ in chunks_of(texts[f]):
+            preview = "\n".join(texts[f][a_:a_ + 12])
+            if not preview.strip():
+                continue
+            spans.append((f, a_, b_))
+            crit[str(len(spans))] = f"{f} lines {a_ + 1}-{b_}:\n{preview}"[:900]
+    a = ask(f"Which code chunk answers: {question}", crit)
+    ranked = sorted(a["probabilities"].items(), key=lambda kv: -kv[1])[:k]
+    t2 = time.perf_counter()
+    lines = [f"{question}  ({len(files)} files → {len(top_files)} → {len(spans)} chunks; "
+             f"files {round((t1 - t0) * 1000)}ms, chunks {round((t2 - t1) * 1000)}ms)"]
+    for key, p in ranked:
+        f, a_, b_ = spans[int(key) - 1]
+        first = next((l.strip() for l in texts[f][a_:b_] if l.strip()), "")[:80]
+        lines.append(f"  {p:.2f}  {f}:{a_ + 1}-{b_}  {first}")
+    return "\n".join(lines)
+
+
 def handle(cmd):
     op = cmd.get("op")
+    if op == "find":
+        return find(cmd["root"], cmd["question"], int(cmd.get("k", 3)))
     if op == "pick":
         return pick(cmd["question"], cmd["options"], cmd.get("context", ""))
     if op == "web":
