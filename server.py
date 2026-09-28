@@ -126,6 +126,7 @@ class Session:
     def act(self, decision):
         """Execute a decision through jev's own act path (freshness checks, history)."""
         self.state["decision"] = decision
+        self.state["started_at"] = self.state["started_at"] or time.perf_counter()
         self.agent.command("act", {"fingerprint": self.state["page"]["fingerprint"]})
         h = self.state["history"][-1]
         typed = f" ← {h['text']!r} (text {h['text_latency_ms']}ms)" if h.get("text") else ""
@@ -202,12 +203,25 @@ class Session:
         return "\n".join(body)
 
     # ---- Claude's replies ----------------------------------------------
-    def manual(self, op, index, text=None):
+    def manual(self, op, index, text=None, label=None, tries=3):
         _, targets, _ = self.targets()
         key = {"click": "CLICK", "type": "TYPE_TEXT", "select": "SELECT"}[op]
         action = targets.get(key, {}).get(str(index))
+        if label is not None and (not action or action["label"] != label):
+            # the page moved under us: find the same control by its label
+            index, action = next(((i, a) for i, a in targets.get(key, {}).items() if a["label"] == label),
+                                 (index, None))
         if not action:
             raise ValueError(f"no {key} target [{index}] on this page")
+        try:
+            return self._manual(key, action, index, text)
+        except StalePage:
+            if tries <= 1:
+                raise
+            self.state["page"] = self.agent.browser.observe(screenshot=False)
+            return self.manual(op, index, text, action["label"], tries - 1)
+
+    def _manual(self, key, action, index, text):
         if RISKY.search(action["label"]):
             raise ValueError(f"refused: {action['label']!r} is a risky control; a human must press it")
         if text is not None:
@@ -247,6 +261,11 @@ def handle(cmd):
         SESSIONS[s.id] = s
         with s.lock:
             return s.report(*s.run())
+    if op == "open":
+        t0 = time.perf_counter()
+        s = Session(cmd["url"], cmd.get("goal") or "Claude drives this page step by step.", 0.0, 0)
+        SESSIONS[s.id] = s
+        return f"[OPEN] session {s.id} · {time.perf_counter() - t0:.1f}s\n" + s.page_brief()
     if op == "close" and cmd.get("id") == "all":
         for sid in list(SESSIONS):
             SESSIONS.pop(sid).agent.close()
@@ -260,9 +279,30 @@ def handle(cmd):
         if op == "close":
             s.agent.close(); SESSIONS.pop(s.id, None)
             return f"closed {s.id}"
+        if op == "screenshot":
+            return "IMG:" + s.agent.browser.observe(screenshot=True)["screenshot"]
+        if op in {"navigate", "scroll"}:
+            b = s.agent.browser
+            if op == "navigate":
+                b.call("Page.navigate", url=cmd["url"])
+                time.sleep(0.3)
+                for _ in range(50):
+                    try:
+                        if b.evaluate("document.readyState") == "complete":
+                            break
+                    except (StalePage, RuntimeError):
+                        pass
+                    time.sleep(0.1)
+            else:
+                dy = {"down": 1, "up": -1}.get(cmd.get("direction", "down"), 1) * int(cmd.get("pixels", 800))
+                b.evaluate(f"window.scrollBy(0,{dy})")
+                time.sleep(0.15)
+            s.state["page"] = b.observe(screenshot=False)
+            return s.page_brief()
         started = time.perf_counter()
         if op == "say":
             s.hint(cmd["text"])
+            s.max_steps = s.max_steps or 25  # a hint on an opened page hands it to jev
         elif op in {"click", "type", "select"}:
             try:
                 s.manual(op, cmd["index"], cmd.get("text"))
@@ -272,6 +312,8 @@ def handle(cmd):
             pass
         else:
             return f"unknown op {op!r}"
+        if not s.max_steps:
+            return s.report("ok", "your action ran", started)
         if cmd.get("stop"):
             return s.report("ask", "paused after your action (--stop)", started)
         return s.report(*s.run())

@@ -61,7 +61,15 @@ $ jev click f0c7a9 12
 reason: your action failed: refused: 'Submit order' is a risky control; a human must press it
 ```
 
-### Tell Claude Code to use it
+### Use it as Claude Code's browser tool (MCP)
+
+```sh
+claude mcp add --scope user fastbrowser -- python3 "$PWD/jev_mcp.py"
+```
+
+Claude then gets `browser_task` (jev drives toward a goal), plus `browser_open`, `browser_click`, `browser_type`, `browser_select`, `browser_navigate`, `browser_scroll`, `browser_look`, `browser_screenshot`, `browser_reply` and `browser_close`. Every action returns the new page as text, so Claude never needs a separate "read the page" call.
+
+### Or tell Claude Code to use the CLI
 
 Add this to your `CLAUDE.md`:
 
