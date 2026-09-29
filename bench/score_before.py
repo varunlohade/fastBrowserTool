@@ -20,7 +20,7 @@ for l in open(log):
             ok = (f == q["file"] or f.endswith("/" + q["file"]) or q["file"].endswith("/" + f)) and any(a <= n <= b for n in nl)
         rows.append({"id": i, "kind": q["kind"], "ok": ok, "seconds": round(float(p[2]) - st[i], 1),
                      "calls": int(c.group(1)) if c else None})
-for k in ("keyword", "behaviour", None):
+for k in sorted({x["kind"] for x in rows}) + [None]:
     r = [x for x in rows if k is None or x["kind"] == k]
     s = sorted(x["seconds"] for x in r)
     print(f"{k or 'all':9}: correct {sum(x['ok'] for x in r)}/{len(r)} avg {sum(s)/len(s):.1f}s median {s[len(s)//2]:.1f}s "
